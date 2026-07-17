@@ -1,0 +1,6 @@
+{
+  "name": "Constraint Driven System Synthesizer",
+  "description": "An AI-powered software architecture synthesis platform with deterministic engineering checks, multi-generational genetic optimizations, resilience simulation engines, and automatically generated blueprints.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

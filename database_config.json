@@ -1,0 +1,8 @@
+{
+  "host": "localhost",
+  "port": 3300,
+  "username": "root",
+  "password": "9999",
+  "database": "Local instance MySql",
+  "use_mysql": true
+}
