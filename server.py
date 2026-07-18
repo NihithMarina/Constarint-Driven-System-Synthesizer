@@ -5,6 +5,7 @@ import string
 import time
 import subprocess
 import urllib.request
+import tempfile
 from typing import List, Dict, Any, Optional
 
 from fastapi import FastAPI, HTTPException, Body, Path, Query
@@ -20,16 +21,38 @@ import engines
 
 # --- Database Setup (SQLAlchemy 2.0 ORM with Native MySQL & Silent Fallback) ---
 
-# Direct MySQL configuration parameters provided by the user
-MYSQL_HOST = "localhost"
-MYSQL_PORT = 3300
-MYSQL_USER = "root"
-MYSQL_PASS = "9999"
-MYSQL_DB = "Local instance MySql"
+# Environment-driven database configuration.
+# Priority: DATABASE_URL -> MySQL envs -> SQLite fallback.
+IS_RENDER = os.environ.get("RENDER", "").lower() == "true"
 
-sqlite_url = "sqlite:///projects.db"
+MYSQL_HOST = os.environ.get("MYSQL_HOST", "localhost")
+MYSQL_PORT = int(os.environ.get("MYSQL_PORT", "3300"))
+MYSQL_USER = os.environ.get("MYSQL_USER", "root")
+MYSQL_PASS = os.environ.get("MYSQL_PASS", "9999")
+MYSQL_DB = os.environ.get("MYSQL_DB", "Local instance MySql")
+
+default_sqlite_path = os.path.join(tempfile.gettempdir(), "projects.db") if IS_RENDER else "projects.db"
+SQLITE_PATH = os.environ.get("SQLITE_PATH", default_sqlite_path)
+sqlite_url = f"sqlite:///{SQLITE_PATH}"
 
 def try_initialize_db():
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        try:
+            db_engine = create_engine(database_url, pool_pre_ping=True)
+            with db_engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            print("Successfully connected using DATABASE_URL.")
+            return db_engine
+        except Exception as e:
+            print(f"DATABASE_URL connection failed: {e}. Falling back.")
+
+    # On Render without explicit MySQL env vars, skip localhost MySQL and go straight to SQLite fallback.
+    mysql_env_explicit = any(os.environ.get(k) for k in ("MYSQL_HOST", "MYSQL_USER", "MYSQL_PASS", "MYSQL_DB"))
+    if IS_RENDER and not mysql_env_explicit:
+        print(f"Render environment detected without MySQL config. Using SQLite at {SQLITE_PATH}.")
+        return create_engine(sqlite_url, connect_args={"check_same_thread": False})
+
     mysql_base_url = URL.create(
         "mysql+pymysql",
         username=MYSQL_USER,
