@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: constraint-driven-system-synthesizer
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && npm install && npm run build
+    startCommand: python -m uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/projects
+    envVars:
+      - key: RENDER
+        value: "true"
+      - key: GEMINI_API_KEY
+        sync: false
